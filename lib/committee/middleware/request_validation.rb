@@ -35,6 +35,8 @@ module Committee::Middleware
       if link
         validator = Committee::RequestValidator.new(link, check_content_type: @check_content_type)
         validator.call(request, request.env[@params_key])
+
+        request.env["rack.request.query_hash"].merge!(coerce_format(request.env["rack.request.query_hash"], link.schema))
         @app.call(request.env)
       elsif @strict
         raise Committee::NotFound
@@ -55,5 +57,45 @@ module Committee::Middleware
       raise Committee::InvalidRequest if @raise
       @error_class.new(400, :bad_request, "Request body wasn't valid JSON.").render
     end
+
+
+
+
+    private
+
+    def coerce_format(params, schema)
+      coerced = {}
+      schema.properties.each do |k, s|
+        original_val = params[k]
+
+        unless original_val.nil?
+          s.type.each do |to_type|
+            case to_type
+              when "string"
+                coerce_val = coerce_string_val(original_val, s)
+                coerced[k] = coerce_val if coerce_val
+            end
+
+            break if coerced.key?(k)
+          end
+        end
+      end
+
+      coerced
+    end
+
+    def coerce_string_val(original_val, scheme)
+      case scheme.format
+        when "date-time"
+          begin
+            DateTime.parse(original_val)
+          rescue ArgumentError => e
+            raise e unless e.message =~ /invalid date/
+          end
+        else
+          nil
+      end
+    end
   end
+
 end
