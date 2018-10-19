@@ -35,7 +35,7 @@ module Committee::Drivers
       end
 
       openapi_version = Gem::Version.create(data['openapi'])
-      unless Gem::Version.create('3.0.0') <= openapi_version && openapi_version < Gem::Version.create('4.0.0')
+      unless Gem::Version.create('3.0.0') <= openapi_version
         raise ArgumentError, "Committee: driver requires OpenAPI 3."
       end
 
